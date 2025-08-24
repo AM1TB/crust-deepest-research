@@ -18,12 +18,12 @@ class DeepResearchAgent:
     """A CrewAI agent specialized in performing deep research with REST API integration."""
     
     def __init__(self):
-        # Initialize Claude LLM
+        # Initialize Claude LLM with context-conscious settings
         self.llm = ChatAnthropic(
             model="claude-3-7-sonnet-20250219",
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
             temperature=0,
-            max_tokens=4096
+            max_tokens=2048  # Reduced to prevent context overflow in recruitment tasks
         )
         
         # Initialize custom tools

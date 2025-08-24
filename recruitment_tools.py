@@ -93,15 +93,57 @@ class PeopleSearchTool(BaseTool):
             # Make the API call
             response_data = make_authenticated_request(url, payload, method="POST")
             
-            # Format the response
-            result = {
-                "profiles": response_data.get("profiles", []),
-                "next_cursor": response_data.get("next_cursor"),
-                "total_results": len(response_data.get("profiles", [])),
-                "api_credits_used": self._estimate_credits_used(len(response_data.get("profiles", [])))
-            }
+            # Format the response with truncated profiles to prevent context overflow
+            profiles = response_data.get("profiles", [])
             
-            logger.info(f"Search completed: {result['total_results']} profiles returned")
+            # Truncate each profile to essential fields only to prevent context overflow
+            truncated_profiles = []
+            for profile in profiles:
+                truncated_profile = {
+                    "name": profile.get("name", ""),
+                    "headline": profile.get("headline", ""),
+                    "region": profile.get("region", ""),
+                    "years_of_experience_raw": profile.get("years_of_experience_raw", 0),
+                    "current_employers": profile.get("current_employers", [])[:1],  # Only first employer
+                    "skills": profile.get("skills", [])[:10],  # Limit to first 10 skills
+                    "person_id": profile.get("person_id", ""),
+                    "profile_url": profile.get("profile_url", "")
+                }
+                # Further truncate current_employers data
+                if truncated_profile["current_employers"]:
+                    employer = truncated_profile["current_employers"][0]
+                    truncated_profile["current_employers"] = [{
+                        "name": employer.get("name", ""),
+                        "title": employer.get("title", ""),
+                        "start_date": employer.get("start_date", ""),
+                        "company_headcount_latest": employer.get("company_headcount_latest", 0),
+                        "company_industries": employer.get("company_industries", [])[:3]  # Limit industries
+                    }]
+                
+                truncated_profiles.append(truncated_profile)
+            
+            # Further reduce context if we have too many profiles
+            if len(truncated_profiles) > 50:
+                # For large result sets, only return summary statistics and first 20 profiles
+                result = {
+                    "profiles": truncated_profiles[:20],
+                    "next_cursor": response_data.get("next_cursor"),
+                    "total_results": len(profiles),
+                    "profiles_in_response": 20,
+                    "profiles_truncated": len(profiles) - 20,
+                    "api_credits_used": self._estimate_credits_used(len(profiles)),
+                    "note": f"Context-optimized response: showing first 20 of {len(profiles)} profiles to prevent context overflow"
+                }
+            else:
+                result = {
+                    "profiles": truncated_profiles,
+                    "next_cursor": response_data.get("next_cursor"),
+                    "total_results": len(profiles),
+                    "api_credits_used": self._estimate_credits_used(len(profiles)),
+                    "note": "Profile data has been truncated to prevent context overflow"
+                }
+            
+            logger.info(f"Search completed: {result['total_results']} profiles returned (context-optimized)")
             
             return json.dumps(result, indent=2)
             
@@ -440,11 +482,17 @@ class CandidateRankerTool(BaseTool):
             # Sort by score (descending)
             ranked_candidates = sorted(scored_candidates, key=lambda x: x["score"], reverse=True)
             
+            # Limit the number of candidates returned to prevent context overflow
+            max_candidates = 25  # Limit to top 25 candidates
+            limited_candidates = ranked_candidates[:max_candidates]
+            
             result = {
-                "ranked_candidates": ranked_candidates,
+                "ranked_candidates": limited_candidates,
                 "total_candidates": len(ranked_candidates),
+                "candidates_returned": len(limited_candidates),
                 "top_score": ranked_candidates[0]["score"] if ranked_candidates else 0,
-                "average_score": sum(c["score"] for c in ranked_candidates) / len(ranked_candidates) if ranked_candidates else 0
+                "average_score": sum(c["score"] for c in ranked_candidates) / len(ranked_candidates) if ranked_candidates else 0,
+                "note": f"Returning top {len(limited_candidates)} of {len(ranked_candidates)} candidates to optimize context usage"
             }
             
             return json.dumps(result, indent=2)

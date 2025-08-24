@@ -144,3 +144,152 @@ IMPORTANT:
 - You must recall your list of tasks after each tool response
 - You must complete all of your tasks before responding to the user with the final message.
 """
+
+tool_schema = {
+  "name": "people_search",
+  "description": "Query the People Discovery In-DB API to find and paginate candidates using complex, nested filters. Keep filters identical when paginating with a cursor. Use disciplined limits (default 200 results per call).",
+  "strict": False,
+  "parameters": {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+      "filters": {
+        "$ref": "#/$defs/filterNode",
+        "description": "Filter tree for the search. Each node is either a single condition {column,type,value} or a group {op,conditions:[...]} that can nest AND/OR. Use text operator '(.)' for fuzzy matching on text fields. Note: AND across current_employers.* must match the same job object; use all_employers.* for past-or-present signals."
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1000,
+        "description": "Results per page. Default to 200 for disciplined retrieval."
+      },
+      "cursor": {
+        "type": "string",
+        "description": "Opaque cursor from the previous response to fetch the next page. Filters must remain identical when using a cursor."
+      },
+      "post_processing": {
+        "type": "object",
+        "additionalProperties": False,
+        "description": "Extra filtering applied after the main query.",
+        "properties": {
+          "exclude_profiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "LinkedIn profile URLs to exclude"
+          },
+          "exclude_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names to exclude"
+          }
+        }
+      }
+    },
+    "required": [
+      "filters"
+    ],
+    "$defs": {
+      "filterNode": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/simpleCondition"
+          },
+          {
+            "$ref": "#/$defs/groupCondition"
+          }
+        ],
+        "description": "A single condition or a grouped condition with logical operator and nested conditions."
+      },
+      "simpleCondition": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+          "column",
+          "type",
+          "value"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "Field to filter (e.g., 'region', 'headline', 'skills', 'years_of_experience_raw', 'current_employers.title', 'current_employers.name', 'all_employers.name', 'education_background.institute_name', 'certifications.name', 'honors.title')."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "=",
+              "!=",
+              "in",
+              "not_in",
+              ">",
+              "<",
+              "=>",
+              "=<",
+              "(.)"
+            ],
+            "description": "Operator to apply."
+          },
+          "value": {
+            "description": "Value to compare. For 'in'/'not_in', supply an array. For dates, use ISO strings.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "groupCondition": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+          "op",
+          "conditions"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "description": "Logical operator for the group."
+          },
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/filterNode"
+            },
+            "description": "Nested conditions. Each item can be a simple condition or another group."
+          }
+        }
+      }
+    }
+  }
+}

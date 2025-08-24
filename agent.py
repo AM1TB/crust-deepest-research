@@ -1,11 +1,12 @@
 """
-CrewAI Deep Research Agent with REST API integration.
+CrewAI Deep Research Agent with REST API integration and Recruitment functionality.
 """
 
 import os
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from tools import TodoAPITool, MultiTodoAPITool
+from recruitment_agent import RecruitmentResearchAgent
 from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
 
@@ -35,6 +36,9 @@ class DeepResearchAgent:
         # Add web search tools if API keys are available
         if os.getenv("SERPER_API_KEY"):
             self.tools.append(SerperDevTool())
+        
+        # Initialize recruitment research agent
+        self.recruitment_agent = RecruitmentResearchAgent()
         
         # Create the research agent
         self.researcher = Agent(
@@ -163,6 +167,104 @@ class DeepResearchAgent:
         print(user_todos)
         
         return "API demonstration completed successfully!"
+    
+    def conduct_recruitment_research(self, recruitment_brief: str) -> str:
+        """
+        Execute recruitment research using the specialized recruitment agent.
+        
+        Args:
+            recruitment_brief (str): The recruitment brief describing the position and requirements
+            
+        Returns:
+            str: Formatted recruitment research results
+        """
+        try:
+            print(f"🎯 Starting recruitment research for: {recruitment_brief[:100]}...")
+            print("=" * 60)
+            
+            # Execute recruitment research
+            result = self.recruitment_agent.conduct_recruitment_research(recruitment_brief)
+            
+            if "error" in result:
+                return f"❌ Recruitment research failed: {result['error']}"
+            
+            # Format the results for display
+            formatted_result = self._format_recruitment_results(result)
+            
+            print("=" * 60)
+            print("✅ Recruitment research completed!")
+            
+            return formatted_result
+            
+        except Exception as e:
+            error_msg = f"Error in recruitment research: {str(e)}"
+            print(f"❌ {error_msg}")
+            return error_msg
+    
+    def _format_recruitment_results(self, result: dict) -> str:
+        """Format recruitment research results for display."""
+        try:
+            formatted = "🎯 RECRUITMENT RESEARCH RESULTS\n"
+            formatted += "=" * 60 + "\n\n"
+            
+            # Requirements summary
+            if "requirements" in result:
+                formatted += "📋 REQUIREMENTS SUMMARY:\n"
+                formatted += f"Original Brief: {result['requirements'].get('brief', 'N/A')}\n"
+                formatted += f"Target Count: {result['requirements'].get('target_count', 100)} candidates\n"
+                formatted += f"Credits Cap: {result['requirements'].get('credits_cap', 18)}\n\n"
+            
+            # Search strategy
+            if "plan" in result:
+                formatted += "🔍 SEARCH STRATEGY:\n"
+                formatted += f"Objective: {result['plan'].get('objective', 'N/A')}\n"
+                formatted += f"Strategy: {result['plan'].get('strategy', 'N/A')}\n"
+                formatted += f"Exploration Variants: {result['plan'].get('exploration_variants', 3)}\n"
+                formatted += f"Per-Call Limit: {result['plan'].get('per_call_limit', 200)}\n\n"
+            
+            # Results summary
+            metadata = result.get("metadata", {})
+            formatted += "📊 RESULTS SUMMARY:\n"
+            formatted += f"Total Candidates Found: {metadata.get('total_candidates', 0)}\n"
+            formatted += f"Estimated Credits Used: {metadata.get('estimated_credits_used', 0)}\n"
+            formatted += f"Phases Completed: {metadata.get('phases_completed', 0)}/5\n\n"
+            
+            # Ranked candidates (if available)
+            ranked_candidates = result.get("ranked_candidates", {})
+            candidates = ranked_candidates.get("ranked_candidates", [])
+            
+            if candidates:
+                formatted += "🏆 TOP CANDIDATES:\n"
+                formatted += "-" * 40 + "\n"
+                
+                for i, candidate in enumerate(candidates[:5], 1):  # Show top 5
+                    formatted += f"{i}. {candidate.get('name', 'N/A')}\n"
+                    formatted += f"   Score: {candidate.get('score', 0)}\n"
+                    formatted += f"   Title: {candidate.get('headline', 'N/A')}\n"
+                    formatted += f"   Region: {candidate.get('region', 'N/A')}\n"
+                    
+                    rationale = candidate.get('rationale', [])
+                    if rationale:
+                        formatted += f"   Rationale: {'; '.join(rationale[:2])}\n"
+                    
+                    formatted += "\n"
+            else:
+                formatted += "No candidates found or ranking not completed.\n\n"
+            
+            # Run summary
+            if "run_summary" in result:
+                formatted += "📝 RUN SUMMARY:\n"
+                formatted += "-" * 40 + "\n"
+                summary_lines = str(result["run_summary"]).split('\n')
+                for line in summary_lines[:10]:  # Show first 10 lines
+                    if line.strip():
+                        formatted += f"{line.strip()}\n"
+                formatted += "\n"
+            
+            return formatted
+            
+        except Exception as e:
+            return f"Error formatting results: {str(e)}\n\nRaw results:\n{result}"
 
 
 if __name__ == "__main__":

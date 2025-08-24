@@ -1,10 +1,17 @@
 # Anthropic API Key (required for CrewAI with Claude)
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-# Claude API Key (optional - for text summarization and translation)
-# Get it from https://www.claude.ai/
-CLAUDE_API_KEY=your_claude_api_key_here
+# CrustData API Key (optional - for People Discovery API and recruitment features)
+# Get it from https://www.crustdata.com/
+CRUSTDATA_API_KEY=your_crustdata_api_key_here
 
-# Crust AI Data API Key (optional - for data integration)
-# Get it from https://data.crust.ai
-CRUST_API_KEY=your_crust_api_key_here
+# CrustData API Base URL (optional - defaults to production)
+CRUSTDATA_API_BASE_URL=https://api.crustdata.com
+
+# Serper API Key (optional - for web search capabilities)
+# Get it from https://serper.dev/
+SERPER_API_KEY=your_serper_api_key_here
+
+# Google Search API Keys (optional - alternative web search)
+GOOGLE_API_KEY=your_google_api_key_here
+GOOGLE_CSE_ID=your_custom_search_engine_id_here

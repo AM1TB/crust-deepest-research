@@ -1,10 +1,10 @@
 # OpenAI API Key (required for CrewAI)
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=""
 
-# Serper API Key (optional - for web search functionality)
-# Get it from https://serper.dev/
-SERPER_API_KEY=your_serper_api_key_here
+# Claude API Key (optional - for text summarization and translation)
+# Get it from https://www.claude.ai/
+CLAUDE_API_KEY=your_claude_api_key_here
 
-# Other optional API keys for enhanced research capabilities
-GOOGLE_API_KEY=your_google_api_key_here
-GOOGLE_CSE_ID=your_google_cse_id_here
+# Crust AI Data API Key (optional - for data integration)
+# Get it from https://data.crust.ai
+CRUST_API_KEY=your_crust_api_key_here

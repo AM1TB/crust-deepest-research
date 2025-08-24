@@ -4,7 +4,7 @@ Custom tools for the CrewAI research agent.
 
 import requests
 import json
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 
 class TodoAPITool(BaseTool):

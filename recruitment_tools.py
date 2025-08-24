@@ -6,6 +6,7 @@ import os
 import json
 from typing import Dict, Any, Optional, List
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 from utils.api_client import make_authenticated_request
 import logging
 
@@ -14,11 +15,25 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class PeopleSearchArgs(BaseModel):
+    """Arguments for PeopleSearch tool."""
+    filters: Dict[str, Any] = Field(description="Filter tree for the search")
+    limit: int = Field(default=200, description="Results per page (1-1000)")
+    cursor: Optional[str] = Field(default=None, description="Pagination cursor")
+    post_processing: Optional[Dict[str, Any]] = Field(default=None, description="Post-processing exclusions")
+
+
 class PeopleSearchTool(BaseTool):
     name: str = "people_search"
     description: str = """
     Query the People Discovery In-DB API to find and paginate candidates using complex, nested filters. 
     Keep filters identical when paginating with a cursor. Use disciplined limits (default 200 results per call).
+    
+    Parameters:
+    - filters (required): Dict with column/type/value structure or nested conditions
+    - limit (optional): Integer 1-1000, defaults to 200
+    - cursor (optional): String for pagination or null for first page
+    - post_processing (optional): Dict with exclusions or null
     
     This tool supports:
     - Complex nested filters with AND/OR logic
@@ -27,6 +42,7 @@ class PeopleSearchTool(BaseTool):
     - Post-processing exclusions for profiles and names
     - Rate limiting (60 RPM) and credit management (3 credits per 100 results)
     """
+    args_schema: type[BaseModel] = PeopleSearchArgs
 
     def _run(
         self,
@@ -105,6 +121,14 @@ class FilterBuilderTool(BaseTool):
     Helper tool to build complex nested filters for the People Search API.
     Supports creating filters for titles, skills, experience, company constraints, geography, etc.
     Uses the proper column names and operators as defined in the API schema.
+    
+    Usage examples:
+    - Title filter: filter_type="title", titles=["Software Engineer", "Developer"], fuzzy=True
+    - Skills filter: filter_type="skills", skills=["Python", "JavaScript"], fuzzy=True  
+    - Experience filter: filter_type="experience", min_years=3, max_years=10
+    - Company filter: filter_type="company", company_size_min=100, company_size_max=1000, industries=["Technology"]
+    - Region filter: filter_type="region", regions=["San Francisco Bay Area"], fuzzy=True
+    - Combined filter: filter_type="combined", filter_components=[filter1, filter2]
     """
     
     def _run(
@@ -124,19 +148,52 @@ class FilterBuilderTool(BaseTool):
         """
         try:
             if filter_type == "title":
+                if 'titles' not in kwargs:
+                    return json.dumps({
+                        "error": "Missing required parameter 'titles' for title filter",
+                        "usage": "filter_type='title', titles=['Software Engineer', 'Developer'], fuzzy=True"
+                    })
                 return self._build_title_filter(**kwargs)
             elif filter_type == "skills":
+                if 'skills' not in kwargs:
+                    return json.dumps({
+                        "error": "Missing required parameter 'skills' for skills filter",
+                        "usage": "filter_type='skills', skills=['Python', 'JavaScript'], fuzzy=True"
+                    })
                 return self._build_skills_filter(**kwargs)
             elif filter_type == "experience":
+                if 'min_years' not in kwargs:
+                    return json.dumps({
+                        "error": "Missing required parameter 'min_years' for experience filter",
+                        "usage": "filter_type='experience', min_years=3, max_years=10"
+                    })
                 return self._build_experience_filter(**kwargs)
             elif filter_type == "company":
+                if not any(k in kwargs for k in ['company_size_min', 'company_size_max', 'industries', 'exclude_companies']):
+                    return json.dumps({
+                        "error": "Missing required parameters for company filter. Need at least one of: company_size_min, company_size_max, industries, exclude_companies",
+                        "usage": "filter_type='company', company_size_min=100, company_size_max=1000, industries=['Technology']"
+                    })
                 return self._build_company_filter(**kwargs)
             elif filter_type == "region":
+                if 'regions' not in kwargs:
+                    return json.dumps({
+                        "error": "Missing required parameter 'regions' for region filter",
+                        "usage": "filter_type='region', regions=['San Francisco Bay Area'], fuzzy=True"
+                    })
                 return self._build_region_filter(**kwargs)
             elif filter_type == "combined":
+                if 'filter_components' not in kwargs:
+                    return json.dumps({
+                        "error": "Missing required parameter 'filter_components' for combined filter",
+                        "usage": "filter_type='combined', filter_components=[filter1, filter2]"
+                    })
                 return self._build_combined_filter(**kwargs)
             else:
-                return json.dumps({"error": f"Unknown filter type: {filter_type}"})
+                return json.dumps({
+                    "error": f"Unknown filter type: {filter_type}",
+                    "valid_types": ["title", "skills", "experience", "company", "region", "combined"]
+                })
                 
         except Exception as e:
             return json.dumps({"error": f"Error building filter: {str(e)}"})
@@ -204,7 +261,7 @@ class FilterBuilderTool(BaseTool):
             # Only minimum requirement
             filter_obj = {
                 "column": "years_of_experience_raw",
-                "type": ">=",
+                "type": "=>",
                 "value": min_years
             }
         else:
@@ -217,12 +274,12 @@ class FilterBuilderTool(BaseTool):
                 "conditions": [
                     {
                         "column": "years_of_experience_raw",
-                        "type": ">=",
+                        "type": "=>",
                         "value": min_years
                     },
                     {
                         "column": "years_of_experience_raw",
-                        "type": "<=",
+                        "type": "=<",
                         "value": max_years
                     }
                 ]
@@ -244,14 +301,14 @@ class FilterBuilderTool(BaseTool):
         if company_size_min is not None:
             conditions.append({
                 "column": "current_employers.company_headcount_latest",
-                "type": ">=",
+                "type": "=>",
                 "value": company_size_min
             })
             
         if company_size_max is not None:
             conditions.append({
                 "column": "current_employers.company_headcount_latest",
-                "type": "<=",
+                "type": "=<",
                 "value": company_size_max
             })
         

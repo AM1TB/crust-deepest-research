@@ -73,8 +73,27 @@ class RecruitmentResearchAgent:
             - Focus on quality over quantity
             - Use exploration (up to 3 variants × 1 page each) followed by exploitation (best 1-2 variants × up to 2 additional pages each)
             
+            IMPORTANT: You build filters using the correct API schema format:
+            - Filters must use column/type/value structure with proper keys
+            - For title search: column="current_employers.title", type="(.)", value="Software Engineer"
+            - For skills: column="skills", type="(.)", value="Python"  
+            - For experience: column="years_of_experience_raw", type="=>", value=5
+            - For company size: column="current_employers.company_headcount_latest", type="=>", value=50
+            - For location: column="region", type="(.)", value="San Francisco"
+            - Valid operators: "=", "!=", "in", "not_in", ">", "<", "=>", "=<", "(.)"
+            - Use "=>" for greater than or equal (not ">=")
+            - Use "=<" for less than or equal (not "<=")
+            - Use "(.)" for fuzzy text matching
+            - Combine multiple conditions with: op="and" and conditions array
+            
+            CRITICAL: Always include ALL required parameters when calling people_search:
+            - filters: your filter object
+            - limit: number (e.g., 200)
+            - cursor: null for first page, or string for pagination
+            - post_processing: null or object with exclusions
+            
             Your methodology:
-            1. Build base filters from must-haves
+            1. Build base filters from must-haves using correct operators
             2. Generate exploration variants with fuzzy matching
             3. Evaluate quality and uniqueness
             4. Select best variants for focused pagination
@@ -82,7 +101,7 @@ class RecruitmentResearchAgent:
             6. Provide concise run summaries without revealing internal tokens""",
             verbose=True,
             allow_delegation=True,
-            tools=self.tools,
+            tools=[self.people_search_tool, self.candidate_ranker_tool],  # Only search and ranking tools
             llm=self.llm,
             max_iter=10,
             max_execution_time=600  # 10 minutes max
@@ -96,10 +115,11 @@ class RecruitmentResearchAgent:
             backstory="""You are an expert at translating recruitment briefs into actionable search strategies.
             You understand how to balance must-haves vs nice-to-haves, geographic constraints, company signals,
             and seniority requirements. You create disciplined plans that respect API rate limits and credit caps
-            while maximizing candidate quality. You never reveal internal query tokens or raw filters in plans.""",
+            while maximizing candidate quality. You never reveal internal query tokens or raw filters in plans.
+            You do NOT use filter_builder tools - you understand the API schema and build filters directly.""",
             verbose=True,
             allow_delegation=False,
-            tools=[self.filter_builder_tool],
+            tools=[],  # No tools - planner creates high-level strategy only
             llm=self.llm,
             max_iter=3,
             max_execution_time=180
@@ -220,9 +240,12 @@ class RecruitmentResearchAgent:
             Follow this disciplined algorithm:
             
             EXPLORATION PHASE:
-            1. Build base filters using must-have requirements
+            1. Build base filters using must-have requirements in proper API format:
+               Example structure: Use "op" with "and" and "conditions" array containing 
+               column/type/value objects for title, skills, and experience filters
             2. Generate up to 3 query variants using fuzzy matching for titles/skills
             3. Execute people_search for each variant (limit=200, 1 page only)
+               ALWAYS include: filters, limit, cursor=null, post_processing=null
             4. Score results and measure uniqueness and must-have presence
             
             SELECTION AND REFINEMENT:

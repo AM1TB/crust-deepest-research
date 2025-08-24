@@ -1,5 +1,5 @@
-# OpenAI API Key (required for CrewAI)
-OPENAI_API_KEY=""
+# Anthropic API Key (required for CrewAI with Claude)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 # Claude API Key (optional - for text summarization and translation)
 # Get it from https://www.claude.ai/

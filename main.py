@@ -10,7 +10,7 @@ from agent import DeepResearchAgent
 
 def check_api_keys():
     """Check if required API keys are set."""
-    required_keys = ["OPENAI_API_KEY"]
+    required_keys = ["ANTHROPIC_API_KEY"]
     missing_keys = []
     
     for key in required_keys:

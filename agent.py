@@ -7,6 +7,7 @@ from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from tools import TodoAPITool, MultiTodoAPITool
 from dotenv import load_dotenv
+from langchain_anthropic import ChatAnthropic
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +17,14 @@ class DeepResearchAgent:
     """A CrewAI agent specialized in performing deep research with REST API integration."""
     
     def __init__(self):
+        # Initialize Claude LLM
+        self.llm = ChatAnthropic(
+            model="claude-3-7-sonnet-20250219",
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+            temperature=0,
+            max_tokens=4096
+        )
+        
         # Initialize custom tools
         self.todo_tool = TodoAPITool()
         self.multi_todo_tool = MultiTodoAPITool()
@@ -38,6 +47,7 @@ class DeepResearchAgent:
             verbose=True,
             allow_delegation=False,
             tools=self.tools,
+            llm=self.llm,
             max_iter=3,
             max_execution_time=300  # 5 minutes max
         )
@@ -110,7 +120,8 @@ class DeepResearchAgent:
             agents=[self.researcher],
             tasks=[research_task],
             verbose=2,
-            process=Process.sequential
+            process=Process.sequential,
+            manager_llm=self.llm
         )
         
         # Execute the research

@@ -145,6 +145,7 @@ IMPORTANT:
 - You must complete all of your tasks before responding to the user with the final message.
 """
 
+
 tool_schema = {
   "name": "people_search",
   "description": "Query the People Discovery In-DB API to find and paginate candidates using complex, nested filters. Keep filters identical when paginating with a cursor. Use disciplined limits (default 200 results per call).",
@@ -174,89 +175,148 @@ tool_schema = {
         "properties": {
           "exclude_profiles": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
+            "items": { "type": "string" },
             "description": "LinkedIn profile URLs to exclude"
           },
           "exclude_names": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
+            "items": { "type": "string" },
             "description": "Names to exclude"
           }
         }
       }
     },
-    "required": [
-      "filters"
-    ],
+    "required": ["filters"],
     "$defs": {
       "filterNode": {
         "anyOf": [
-          {
-            "$ref": "#/$defs/simpleCondition"
-          },
-          {
-            "$ref": "#/$defs/groupCondition"
-          }
+          { "$ref": "#/$defs/simpleCondition" },
+          { "$ref": "#/$defs/groupCondition" }
         ],
         "description": "A single condition or a grouped condition with logical operator and nested conditions."
       },
       "simpleCondition": {
         "type": "object",
         "additionalProperties": False,
-        "required": [
-          "column",
-          "type",
-          "value"
-        ],
+        "required": ["column", "type", "value"],
         "properties": {
           "column": {
             "type": "string",
-            "description": "Field to filter (e.g., 'region', 'headline', 'skills', 'years_of_experience_raw', 'current_employers.title', 'current_employers.name', 'all_employers.name', 'education_background.institute_name', 'certifications.name', 'honors.title')."
+            "enum": [
+              "person_id",
+              "name",
+              "first_name",
+              "last_name",
+              "region",
+              "headline",
+              "summary",
+              "skills",
+              "languages",
+              "profile_language",
+              "emails",
+              "twitter_handle",
+              "num_of_connections",
+              "recently_changed_jobs",
+              "years_of_experience",
+              "years_of_experience_raw",
+              "current_employers.name",
+              "current_employers.linkedin_id",
+              "current_employers.logo_url",
+              "current_employers.linkedin_description",
+              "current_employers.company_id",
+              "current_employers.company_website_domain",
+              "current_employers.position_id",
+              "current_employers.title",
+              "current_employers.description",
+              "current_employers.location",
+              "current_employers.start_date",
+              "current_employers.end_date",
+              "current_employers.company_headquarters_country",
+              "current_employers.company_headquarters_address",
+              "current_employers.company_headcount_range",
+              "current_employers.company_headcount_latest",
+              "current_employers.company_industries",
+              "current_employers.company_type",
+              "past_employers.name",
+              "past_employers.linkedin_id",
+              "past_employers.logo_url",
+              "past_employers.linkedin_description",
+              "past_employers.company_id",
+              "past_employers.company_website_domain",
+              "past_employers.position_id",
+              "past_employers.title",
+              "past_employers.description",
+              "past_employers.location",
+              "past_employers.start_date",
+              "past_employers.end_date",
+              "past_employers.company_headquarters_country",
+              "past_employers.company_headquarters_address",
+              "past_employers.company_headcount_range",
+              "past_employers.company_headcount_latest",
+              "past_employers.company_industries",
+              "past_employers.company_type",
+              "all_employers.name",
+              "all_employers.linkedin_id",
+              "all_employers.logo_url",
+              "all_employers.linkedin_description",
+              "all_employers.company_id",
+              "all_employers.company_website_domain",
+              "all_employers.position_id",
+              "all_employers.title",
+              "all_employers.description",
+              "all_employers.location",
+              "all_employers.start_date",
+              "all_employers.end_date",
+              "all_employers.company_headquarters_country",
+              "all_employers.company_headquarters_address",
+              "all_employers.company_headcount_range",
+              "all_employers.company_headcount_latest",
+              "all_employers.company_industries",
+              "all_employers.company_type",
+              "education_background.degree_name",
+              "education_background.institute_name",
+              "education_background.institute_linkedin_id",
+              "education_background.institute_linkedin_url",
+              "education_background.institute_logo_url",
+              "education_background.field_of_study",
+              "education_background.activities_and_societies",
+              "education_background.start_date",
+              "education_background.end_date",
+              "honors.title",
+              "honors.issued_date",
+              "honors.description",
+              "honors.issuer",
+              "honors.media_urls",
+              "honors.associated_organization_linkedin_id",
+              "honors.associated_organization",
+              "certifications.name",
+              "certifications.issued_date",
+              "certifications.expiration_date",
+              "certifications.url",
+              "certifications.issuer_organization",
+              "certifications.issuer_organization_linkedin_id",
+              "certifications.certification_id"
+            ],
+            "description": "Field to filter."
           },
           "type": {
             "type": "string",
-            "enum": [
-              "=",
-              "!=",
-              "in",
-              "not_in",
-              ">",
-              "<",
-              "=>",
-              "=<",
-              "(.)"
-            ],
+            "enum": ["=", "!=", "in", "not_in", ">", "<", "=>", "=<", "(.)"],
             "description": "Operator to apply."
           },
           "value": {
             "description": "Value to compare. For 'in'/'not_in', supply an array. For dates, use ISO strings.",
             "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "boolean"
-              },
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
               {
                 "type": "array",
                 "items": {
                   "oneOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
-                    }
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" }
                   ]
                 }
               }
@@ -267,25 +327,17 @@ tool_schema = {
       "groupCondition": {
         "type": "object",
         "additionalProperties": False,
-        "required": [
-          "op",
-          "conditions"
-        ],
+        "required": ["op", "conditions"],
         "properties": {
           "op": {
             "type": "string",
-            "enum": [
-              "and",
-              "or"
-            ],
+            "enum": ["and", "or"],
             "description": "Logical operator for the group."
           },
           "conditions": {
             "type": "array",
             "minItems": 1,
-            "items": {
-              "$ref": "#/$defs/filterNode"
-            },
+            "items": { "$ref": "#/$defs/filterNode" },
             "description": "Nested conditions. Each item can be a simple condition or another group."
           }
         }

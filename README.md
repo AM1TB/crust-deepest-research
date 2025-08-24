@@ -31,7 +31,7 @@ crust-deepest-research/
 
 2. **Set up Environment Variables**:
    - Copy `env_example.txt` to `.env`
-   - Add your OpenAI API key (required)
+   - Add your LLM API key (required)
    - Add optional API keys for enhanced functionality
 
 3. **Run the Agent**:
